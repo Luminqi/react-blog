@@ -1,0 +1,11 @@
+.image {
+  cursor: default;
+}
+
+.image.focused {
+  box-shadow: 0 0 0 3px #03a87c;
+}
+
+.image.blurred:hover {
+  box-shadow: 0 0 0 3px #34e79a;
+}

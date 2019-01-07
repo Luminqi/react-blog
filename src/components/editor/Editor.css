@@ -1,0 +1,19 @@
+.editor-wrapper {
+  position: relative;
+  border: 1px solid #ccc;
+  cursor: text;
+  box-sizing: content-box;
+  max-width: 700px;
+  min-height: 80px;
+  padding: 0 50px;
+  margin: 100px auto;
+}
+.myCodeBlock {
+  font: 14px, Menlo, Monaco, "Courier New", Courier, monospace;
+  line-height: 1.4;
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 20px;
+  margin: 0;
+  white-space: pre-wrap;
+}
+

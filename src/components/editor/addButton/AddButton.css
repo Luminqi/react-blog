@@ -1,0 +1,94 @@
+.tooltip {
+  position: absolute;
+  left: 0;
+  height: 40px;
+  background-color: #ffffff;
+  z-index: 1000;
+  display: flex;
+  border: 1px solid black;
+}
+
+.tooltip-button {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background-color: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.68);
+  border-radius: 100%;
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 250ms;
+}
+
+.add {
+  transform: rotate(0);
+}
+.close {
+  transform: rotate(45deg);
+}
+
+.add-svg {
+  width: 25px;
+  height: 25px;
+  fill: rgba(0, 0, 0, 0.68);
+}
+
+.tooltip-menu {
+  height: 40px;
+  padding-left: 22px;
+  display: flex; 
+}
+
+.tooltip-menu.showing {
+  flex-direction: row;
+}
+
+.tooltip-menu.hiding {
+  flex-direction: column;
+  position: absolute;
+  left: -22px;
+  top: 32px;
+}
+
+.tooltip-menu-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  margin-right: 9px;
+  background-color: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.68);
+  border-radius: 100%;
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tooltip-menu-btn.hiding {
+  transform: scale(0);
+}
+
+.tooltip-menu-btn.showing {
+  transform: scale(1);
+  transition: transform 0.2s ease;
+}
+
+.video-btn.showing {
+  transition-delay: 30ms!important;
+}
+
+.section-btn.showing {
+  transition-delay: 60ms!important;
+}
+
+.tooltip-svg {
+  width: 25px;
+  height: 25px;
+  fill: rgba(0, 0, 0, 0.68);
+}

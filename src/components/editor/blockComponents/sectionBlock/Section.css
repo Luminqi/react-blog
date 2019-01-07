@@ -1,0 +1,22 @@
+.section-divider {
+  padding-top: 52px;
+  padding-bottom: 42px;
+  display: block;
+  border: 0;
+  text-align: center;
+  box-sizing: content-box;
+}
+
+.section-divider:before {
+  --x-height-multiplier: 0.342;
+  --baseline-multiplier: 0.22;
+  font-family: Georgia, Cambria, "Times New Roman", Times, serif;
+  font-weight: 400;
+  font-style: italic;
+  font-size: 30px;
+  letter-spacing: 0.6em;
+  content: '...';
+  display: inline-block;
+  margin-left: 0.6em;
+  color: rgba(0, 0, 0, 0.68);
+}

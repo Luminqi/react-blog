@@ -1,6 +1,11 @@
 {
   "compilerOptions": {
     "target": "es5",
+    "lib": [
+      "dom",
+      "es7"
+    ],
+    "types": ["node", "@emotion/core"],
     "allowJs": true,
     "skipLibCheck": false,
     "esModuleInterop": true,
