@@ -7,7 +7,16 @@
   min-height: 80px;
   padding: 0 50px;
   margin: 100px auto;
+  color: rgba(0, 0, 0, 0.68);
+  font-size: 21px;
+  line-height: 1.58;
+  font-family: Georgia, 'Times New Roman', Times, serif;
 }
+
+.myUnstyled {
+  margin-top: 30px;
+}
+
 .myCodeBlock {
   font: 14px, Menlo, Monaco, "Courier New", Courier, monospace;
   line-height: 1.4;
@@ -17,3 +26,32 @@
   white-space: pre-wrap;
 }
 
+.myH3Block {
+  color: rgba(0, 0, 0, 0.84);
+  line-height: 1.25;
+  font-weight: 600;
+  font-size: 34px;
+  margin-top: 56px;
+}
+
+.myH4Block {
+  color: rgba(0, 0, 0, 0.84);
+  line-height: 1.22;
+  font-weight: 600;
+  font-size: 26px;
+  margin-top: 30px;
+}
+
+.myBlockQuote {
+  color: rgba(0, 0, 0, 0.68);
+  font-style: italic;
+  line-height: 1.48;
+  font-weight: 400;
+  font-size: 30px;
+  padding-left: 50px;
+  margin-top: 55px;
+}
+
+.myImageBlock {
+  margin-top: 40px;
+}

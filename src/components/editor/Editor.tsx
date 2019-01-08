@@ -75,11 +75,28 @@ function defineBlockType (currentInput: string): string {
 }
 
 function myBlockStyleFn (contentBlock: ContentBlock) {
-  const type = contentBlock.getType()
-  if (type === 'code-block') {
-    return 'myCodeBlock'
+  const type = contentBlock.getType() as string
+  switch (type) {
+    case 'unstyled': {
+      return 'myUnstyled'
+    }
+    case 'code-block': {
+      return 'myCodeBlock'
+    }
+    case 'header-three': {
+      return 'myH3Block'
+    }
+    case 'header-four': {
+      return 'myH4Block'
+    }
+    case 'blockquote': {
+      return 'myBlockQuote'
+    }
+    case 'image-block': {
+      return 'myImageBlock'
+    }
+    default: return type
   }
-  return type
 }
 
 
@@ -420,6 +437,13 @@ export default class MediumEditor extends PureComponent<object, State> {
       selectionState
     ))
   }
+  changeBlockType = (type: string): void => {
+    const selectionState = this.state.editorState.getSelection()
+    this.onChange(EditorState.forceSelection(
+      RichUtils.toggleBlockType(this.state.editorState, type),
+      selectionState
+    ))
+  }
   confirmLink = (url: string) => {
     const editorState = this.state.editorState
     const contentState = editorState.getCurrentContent()
@@ -552,12 +576,24 @@ export default class MediumEditor extends PureComponent<object, State> {
       }
       inlineToolTipVisibility = true
       switch (type as string) {
+        case 'header-three':
+        case 'header-four':
+        case 'blockquote':
         case 'unstyled': {
-          this._inlineTools = ['BOLD', 'ITALIC', 'LINK']
+          this._inlineTools = ['BOLD', 'ITALIC', 'LINK', 'H3', 'H4', 'BLOCKQUOTE']
           inlineStyle = editorState.getCurrentInlineStyle()
           console.log('updateInlineToolTip, haslink: ', this.hasLink())
           if (this.hasLink()) {
             inlineStyle = inlineStyle.add('LINK')
+          }
+          if (type === 'header-three') {
+            inlineStyle = inlineStyle.add('H3')
+          }
+          if (type === 'header-four') {
+            inlineStyle = inlineStyle.add('H4')
+          }
+          if (type === 'blockquote') {
+            inlineStyle = inlineStyle.add('BLOCKQUOTE')
           }
           break
         }
@@ -592,7 +628,7 @@ export default class MediumEditor extends PureComponent<object, State> {
       if (block.getType() === 'unstyled') {
         const node = getSelectedBlockNode()
         if (node) {
-          const topOffset = node.offsetTop
+          const topOffset = node.offsetTop + parseInt((getComputedStyle(node).marginTop!).slice(0 ,-2), 10)
           const visibility = block.getLength() === 0
           this.setState({
             addButtonTopOffset: topOffset,
@@ -620,51 +656,68 @@ export default class MediumEditor extends PureComponent<object, State> {
     const block = contentState.getBlockForKey(key)
     const text = block.getText()
     const type = block.getType() as string
-    if (type === 'code-block') {
-      let newContentState = null
-      if (selectionState.isCollapsed()) {
-        const lines = text.split('\n')
-        const index = getCurrentLineIndex(lines, start)
-        const currentLine = lines[index]
-        const matches = /^ +/g.exec(currentLine)
-        const currentIndent = matches ? matches[0] : ''
-        const newLine = '\n' + currentIndent
-        newContentState = Modifier.insertText(
-          contentState,
-          selectionState,
-          newLine
-        )
-      } else {
-        newContentState = Modifier.replaceText(
-          contentState,
-          selectionState,
-          '\n'
-        )
+    switch (type) {
+      case 'header-three':
+      case 'header-four':
+      case 'blockquote': {
+        const newKey = generateRandomKey()
+        const newBlock = new ContentBlock({ key: newKey, type: 'unstyled' })
+        const blockMap = contentState.getBlockMap()
+        const array: ContentBlock[] = []
+        blockMap.forEach((block, blockKey) => {
+          array.push(block as ContentBlock)
+          if (blockKey === key) {
+              array.push(newBlock)
+          }
+        })
+        const newContentState = ContentState.createFromBlockArray(array)
+        const newSelectionState = new SelectionState({
+          anchorKey: newKey,
+          anchorOffset: 0,
+          focusKey: newKey,
+          focusOffset: 0,
+          isBackward: false,
+          hasFocus: true
+        })
+        this.onChange(EditorState.forceSelection(
+          EditorState.push(editorState, newContentState, 'insert-fragment'),
+          newSelectionState
+        ))
+        return 'handled'
       }
-      const newEditorState = EditorState.forceSelection(
-        EditorState.push(editorState, newContentState, 'insert-characters'),
-        newContentState.getSelectionAfter()
-      )
-      this.onChange(newEditorState)
-      return 'handled'
+      case 'code-block': {
+        let newContentState = null
+        if (selectionState.isCollapsed()) {
+          const lines = text.split('\n')
+          const index = getCurrentLineIndex(lines, start)
+          const currentLine = lines[index]
+          const matches = /^ +/g.exec(currentLine)
+          const currentIndent = matches ? matches[0] : ''
+          const newLine = '\n' + currentIndent
+          newContentState = Modifier.insertText(
+            contentState,
+            selectionState,
+            newLine
+          )
+        } else {
+          newContentState = Modifier.replaceText(
+            contentState,
+            selectionState,
+            '\n'
+          )
+        }
+        const newEditorState = EditorState.forceSelection(
+          EditorState.push(editorState, newContentState, 'insert-characters'),
+          newContentState.getSelectionAfter()
+        )
+        this.onChange(newEditorState)
+        return 'handled'
+      }
     }
     if (this.state.focusBlockKeyStore.includes(key)) {
       this.onChange(insertUnstyledBlock(editorState))
       return 'handled'
     }
-    // if (type === 'image-block') {
-      // const blockMap = contentState.getBlockMap()
-      // const key = generateRandomKey()
-      // const newBlock = new ContentBlock({ key, type: 'unstyled' })
-      // const newBlockMap = blockMap.set(key, newBlock)
-      // const newContentState = contentState.set('blockMap', newBlockMap) as ContentState
-      // const newEditorState = EditorState.forceSelection(
-      //   EditorState.push(editorState, newContentState, 'insert-fragment'),
-      //   newContentState.getSelectionAfter()
-      // )
-      // this.onChange(newEditorState)
-    //   return 'handled'
-    // }
     return 'not-handled'
   }
  
@@ -805,6 +858,7 @@ export default class MediumEditor extends PureComponent<object, State> {
                 toolList={this._inlineTools}
                 activeStyle={inlineStyle}
                 changeInlineStyle={this.changeInlineStyle}
+                changeBlockType={this.changeBlockType}
                 changeBlockAlignment={this.changeBlockAlignment}
                 confirmLink={this.confirmLink}
                 removeLink={this.removeLink}

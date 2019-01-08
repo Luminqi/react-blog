@@ -51,6 +51,7 @@
 
 .inlineToolSet {
   display: flex;
+  align-items: center;
 }
 
 .inline-btn {
@@ -92,7 +93,7 @@
 .linkinput-field {
   display: inline-block;
   background-color: transparent;
-  width: 200px;
+  width: 204px;
   height: 44px;
   padding: 13px 40px 11px 10px;
   margin: 0;

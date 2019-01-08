@@ -13,6 +13,7 @@ interface Props {
   toolList: string[] | null
   activeStyle: OrderedSet<string> | null
   changeInlineStyle(style: string): void
+  changeBlockType(type: string): void
   changeBlockAlignment(alignment: string): void
   confirmLink(url: string): void
   removeLink(): void
@@ -24,6 +25,7 @@ export const InlineToolTip = React.memo(({
   toolList,
   activeStyle,
   changeInlineStyle,
+  changeBlockType,
   changeBlockAlignment,
   confirmLink,
   removeLink
@@ -42,6 +44,10 @@ export const InlineToolTip = React.memo(({
             <Bold active={!!activeStyle && activeStyle.includes('BOLD')} changeInlineStyle={changeInlineStyle} />
             <Italic active={!!activeStyle && activeStyle.includes('ITALIC')} changeInlineStyle={changeInlineStyle} />
             <Link active={!!activeStyle && activeStyle.includes('LINK')} setShowInput={setShowInput} removeLink={removeLink} />
+            <Separator />
+            <H3 active={!!activeStyle && activeStyle.includes('H3')} changeBlockType={changeBlockType} />
+            <H4 active={!!activeStyle && activeStyle.includes('H4')} changeBlockType={changeBlockType} />
+            <BlockQuote active={!!activeStyle && activeStyle.includes('BLOCKQUOTE')} changeBlockType={changeBlockType} />
             <Outsetleft active={!!activeStyle && activeStyle.includes('OUTSETLEFT')} changeBlockAlignment={changeBlockAlignment} />
             <Insetcenter active={!!activeStyle && activeStyle.includes('INSETCENTER')} changeBlockAlignment={changeBlockAlignment} />
             <Outsetcenter active={!!activeStyle && activeStyle.includes('OUTSETCENTER')} changeBlockAlignment={changeBlockAlignment} />
@@ -134,12 +140,23 @@ function InlineToolSet ({
         const type = element.type as React.ComponentClass | React.FunctionComponent
         const name = type.displayName || type.name
         const styleName = (name as string).toLocaleUpperCase()
-        return toolList.includes(styleName)
+        return toolList.includes(styleName) || (name === 'Separator' && toolList.includes('H3'))
       })}
     </div>
   )
 }
 
+function Separator (props: object) {
+  const style = {
+    width: 1,
+    height: 24,
+    margin: '0 6px',
+    background: 'rgba(255, 255, 255, 0.2)'
+  }
+  return (
+    <div className="inline-separator" style={style} />
+  )
+}
 
 function Bold ({
   active,
@@ -179,6 +196,70 @@ function Italic ({
     <button className="inline-btn italic" onClick={handleItalicClick} {...props}>
       <svg className={`inline-svg italic-svg ${status}`}>
         <path d="M9.847 18.04c-.533 0-2.027-.64-1.92-.853l2.027-7.68-.64-.214-1.387 1.494-.427-.427c.534-1.173 1.707-2.667 2.774-2.667.533 0 2.24.534 2.133.854l-2.133 7.786.533.214 1.6-1.067.427.427c-.64 1.066-1.92 2.133-2.987 2.133zm2.347-11.733c-.96 0-1.387-.64-1.387-1.387 0-1.067.747-1.92 1.493-1.92.854 0 1.387.64 1.387 1.493-.107 1.067-.747 1.814-1.493 1.814z" fillRule="evenodd"></path>
+      </svg>
+    </button>
+  )
+}
+
+function H3 ({
+  active,
+  changeBlockType,
+  ...props
+}: {
+  active: boolean
+  changeBlockType(type: string): void
+}) {
+  const status = active ? 'activated' : 'unactivated'
+  const handleH3Click = useCallback(() => {
+    changeBlockType('header-three')
+  }, [])
+  return (
+    <button className="inline-btn h3" onClick={handleH3Click} {...props}>
+      <svg className={`inline-svg h3-svg ${status}`}>
+        <path d="M3 2v4.747h1.656l.383-2.568.384-.311h3.88V15.82l-.408.38-1.56.12V18h7.174v-1.68l-1.56-.12-.407-.38V3.868h3.879l.36.311.407 2.568h1.656V2z" fillRule="evenodd"></path>
+      </svg>
+    </button>
+  )
+}
+
+function H4 ({
+  active,
+  changeBlockType,
+  ...props
+}: {
+  active: boolean
+  changeBlockType(type: string): void
+}) {
+  const status = active ? 'activated' : 'unactivated'
+  const handleH4Click = useCallback(() => {
+    changeBlockType('header-four')
+  }, [])
+  return (
+    <button className="inline-btn h4" onClick={handleH4Click} {...props}>
+      <svg className={`inline-svg h4-svg ${status}`}>
+        <path d="M4 5.5v4.74h1.657l.384-2.569.384-.312h2.733v8.461l-.41.38-1.91.12V18h7.179v-1.68l-1.912-.12-.405-.38V7.359h2.729l.36.312.408 2.57h1.657V5.5z" fillRule="evenodd"></path>
+      </svg>
+    </button>
+  )
+}
+
+function BlockQuote ({
+  active,
+  changeBlockType,
+  ...props
+}: {
+  active: boolean
+  changeBlockType(type: string): void
+}) {
+  const status = active ? 'activated' : 'unactivated'
+  const handleBlockQuoteClick = useCallback(() => {
+    changeBlockType('blockquote')
+  }, [])
+  return (
+    <button className="inline-btn blockquote" onClick={handleBlockQuoteClick} {...props}>
+      <svg className={`inline-svg blockquote-svg ${status}`}>
+        <path d="M15.48 18.024c-2.603 0-4.45-2.172-4.45-4.778 0-3.263 2.498-6.3 6.517-8.803l1.297 1.303c-2.497 1.63-3.91 3.042-3.91 5.214 0 2.824 3.91 3.582 3.91 3.91.11 1.41-1.194 3.15-3.366 3.15h.004v.004z"></path>
+        <path d="M6.578 18.024c-2.606 0-4.453-2.172-4.453-4.778 0-3.263 2.497-6.3 6.515-8.803l1.303 1.303c-2.606 1.63-3.907 3.042-3.907 5.106 0 2.823 3.91 3.58 3.91 3.91 0 1.518-1.304 3.257-3.368 3.257z"></path>
       </svg>
     </button>
   )

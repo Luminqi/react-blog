@@ -1,11 +1,9 @@
 .tooltip {
   position: absolute;
   left: 0;
-  height: 40px;
   background-color: #ffffff;
   z-index: 1000;
   display: flex;
-  border: 1px solid black;
 }
 
 .tooltip-button {
@@ -38,7 +36,7 @@
 }
 
 .tooltip-menu {
-  height: 40px;
+  height: 32px;
   padding-left: 22px;
   display: flex; 
 }

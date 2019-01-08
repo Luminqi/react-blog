@@ -11,7 +11,6 @@ interface Props {
 }
 
 export function Section ({ block } : Props) {
-  console.log('section component')
   return (
     <hr className="section-divider" />
   )

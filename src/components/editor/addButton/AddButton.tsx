@@ -29,15 +29,16 @@ class BaseButton extends PureComponent<Props, State> {
   state = {
     displayChildren: false
   }
-
+  componentDidUpdate () {
+    if (!this.props.visibility) {
+      this.setState({displayChildren: false})
+    }
+  }
   handleButtonClick = () => {
     if (!this.props.visibility) return
     this.setState({displayChildren: !this.state.displayChildren})
   }
   handleChildClick = () => {
-    this.setState({
-      displayChildren: false
-    })
     this.props.hideButton()
   }
   render () {
