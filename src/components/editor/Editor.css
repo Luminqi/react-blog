@@ -29,18 +29,27 @@
 .myH3Block {
   color: rgba(0, 0, 0, 0.84);
   line-height: 1.25;
-  font-weight: 600;
   font-size: 34px;
   margin-top: 56px;
+}
+
+.myH3Block span {
+  font-weight: 600!important;
+  font-style: normal!important;
 }
 
 .myH4Block {
   color: rgba(0, 0, 0, 0.84);
   line-height: 1.22;
-  font-weight: 600;
   font-size: 26px;
   margin-top: 30px;
 }
+
+.myH4Block span {
+  font-weight: 600!important;
+  font-style: normal!important;
+}
+
 
 .myBlockQuote {
   color: rgba(0, 0, 0, 0.68);

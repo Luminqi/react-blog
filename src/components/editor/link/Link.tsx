@@ -10,7 +10,7 @@ interface Props {
 export function Link (props: Props ) {
   const {url} = props.contentState.getEntity(props.entityKey).getData()
   return (
-    <a className="link" href={url} style={{textDecoration: 'underline'}}>
+    <a className="link" href={url} style={{textDecoration: 'underline', color: 'inherit'}}>
       {props.children}
     </a>
   )

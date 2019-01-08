@@ -14,7 +14,8 @@ import {
   DefaultDraftBlockRenderMap,
   getVisibleSelectionRect,
   genKey as generateRandomKey, 
-  CharacterMetadata
+  CharacterMetadata,
+  convertToRaw
 } from 'draft-js'
 import { OrderedSet, Map, List } from 'immutable'
 import 'draft-js/dist/Draft.css'
@@ -311,7 +312,7 @@ export default class MediumEditor extends PureComponent<object, State> {
     </EditorContext.Consumer>
   )
   _editor: Editor | null = null
-  _inlineTools: string[] | null = null
+  _inlineTools: { [key: string]: 'able' | 'disable' } | null = null
   _editorControls: {
     setEditorState: (editorState: EditorState) => void
   }
@@ -578,9 +579,16 @@ export default class MediumEditor extends PureComponent<object, State> {
       switch (type as string) {
         case 'header-three':
         case 'header-four':
-        case 'blockquote':
+        case 'blockquote': 
         case 'unstyled': {
-          this._inlineTools = ['BOLD', 'ITALIC', 'LINK', 'H3', 'H4', 'BLOCKQUOTE']
+          this._inlineTools = {
+            BOLD: type === 'unstyled' ? 'able' : 'disable',
+            ITALIC: type === 'unstyled' ? 'able' : 'disable',
+            LINK: 'able',
+            H3: 'able',
+            H4: 'able',
+            BLOCKQUOTE: 'able'
+          }
           inlineStyle = editorState.getCurrentInlineStyle()
           console.log('updateInlineToolTip, haslink: ', this.hasLink())
           if (this.hasLink()) {
@@ -598,15 +606,33 @@ export default class MediumEditor extends PureComponent<object, State> {
           break
         }
         case 'code-block': {
-          this._inlineTools = ['BOLD', 'ITALIC']
+          this._inlineTools = {
+            BOLD: 'able',
+            ITALIC: 'able',
+            LINK: 'able',
+            H3: 'able',
+            H4: 'able',
+            BLOCKQUOTE: 'able'
+          }
           inlineStyle = editorState.getCurrentInlineStyle()
+          if (this.hasLink()) {
+            inlineStyle = inlineStyle.add('LINK')
+          }
           break
         }
         case 'image-block': {
           if (block.getData().get('width') >= 1000) {
-            this._inlineTools = ['OUTSETLEFT', 'INSETCENTER', 'OUTSETCENTER', 'FILLWIDTH']
+            this._inlineTools = {
+              OUTSETLEFT: 'able',
+              INSETCENTER: 'able',
+              OUTSETCENTER: 'able',
+              FILLWIDTH: 'able'
+            }
           } else {
-            this._inlineTools = ['OUTSETLEFT', 'INSETCENTER']
+            this._inlineTools = {
+              OUTSETLEFT: 'able',
+              INSETCENTER: 'able'
+            }
           }
           inlineStyle = this.getBlockAlignment(key)
           break
@@ -722,15 +748,8 @@ export default class MediumEditor extends PureComponent<object, State> {
   }
  
   handleKeyCommand = (command: string, editorState: EditorState): DraftHandleValue => {
-    // switch (command) {
-    //   case 'save': {
-    //     console.log('save draft')
-    //     return 'handled'
-    //   }
-    //   default: return 'not-handled'
-    // }
     if (command === 'save') {
-      console.log('save draft')
+      console.log('save: ', convertToRaw(this.state.editorState.getCurrentContent()))
       return 'handled'
     }
     const selectionState = editorState.getSelection()
