@@ -82,11 +82,11 @@
   height: 25px;
 }
 
-.inline-svg.unactivated {
+.inline-svg.unactivated, .block-svg.unactivated {
   fill: #fff
 }
 
-.inline-svg.activated {
+.inline-svg.activated, .block-svg.activated {
   fill: #34e79a
 }
 

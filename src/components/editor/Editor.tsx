@@ -23,6 +23,7 @@ import './Editor.css'
 import { AddButton } from './addButton/AddButton'
 import { InlineToolTip } from './inlineToolTip/InlineToolTip'
 import { Img } from './blockComponents/imageBlock/Img'
+import { Caption, handleArrow as handleCaptionArrow } from './blockComponents/CaptionBlock/Caption'
 import { Section } from './blockComponents/sectionBlock/Section'
 import { Focus } from './blockComponents/foucsBlock/Focus'
 import { Link } from './link/Link'
@@ -31,6 +32,7 @@ import { setNativeSelection } from './utils/setNativeSelection'
 import { insertUnstyledBlock } from './blockComponents/foucsBlock/modifiers/insertUnstyledBlock'
 import { removeBlock } from './blockComponents/foucsBlock/modifiers/removeBlock'
 import { setSelection } from './blockComponents/foucsBlock/modifiers/setSelection'
+import { caretAtEdge } from './utils/caretAtEdge'
 
 interface State {
   editorState: EditorState
@@ -134,7 +136,7 @@ function getSelectedBlockNode (): HTMLElement | null {
   if (selection.rangeCount == 0) return null
   let node: any = selection.getRangeAt(0).startContainer
   do {
-    if (node.getAttribute && node.getAttribute('data-block') == 'true')
+    if (node.getAttribute && node.getAttribute('data-block') === 'true')
       return node
     node = node.parentNode
   } while (node != null)
@@ -175,11 +177,12 @@ function insertNewBlock (
       if (!nextBlock) {
         const newKey = generateRandomKey()
         const newBlock = new ContentBlock({ key: newKey, type: newType, data })
+        const newCaptionBlock = new ContentBlock({ key: generateRandomKey(), type: 'caption-block' })
         const blockMap = contentState.getBlockMap()
         const array: ContentBlock[] = []
         blockMap.forEach((block, key) => {
           if (key === currentKey) {
-              array.push(newBlock)
+              array.push(newBlock, newCaptionBlock)
           }
           array.push(block as ContentBlock)
         })
@@ -197,7 +200,17 @@ function insertNewBlock (
           newSelectionState
         )
       } else {
-        const newContentState = Modifier.setBlockType(contentState, selection, newType)
+        const newCaptionBlock = new ContentBlock({ key: generateRandomKey(), type: 'caption-block' })
+        const blockMap = contentState.getBlockMap()
+        const array: ContentBlock[] = []
+        blockMap.forEach((block, key) => {
+          array.push(block as ContentBlock)
+          if (key === currentKey) {
+            array.push(newCaptionBlock)
+          }
+        })
+        const contentStateWithCaption = ContentState.createFromBlockArray(array)
+        const newContentState = Modifier.setBlockType(contentStateWithCaption, selection, newType)
         const finalContentState = Modifier.setBlockData(newContentState, selection, data)
         const newSelectionState = new SelectionState({
           anchorKey: currentKey,
@@ -208,7 +221,7 @@ function insertNewBlock (
           hasFocus: true
         })
         return EditorState.forceSelection(
-          EditorState.push(editorState, finalContentState, 'change-block-type'),
+          EditorState.push(editorState, finalContentState, 'insert-fragment'),
           newSelectionState
         )
       }
@@ -265,6 +278,12 @@ function myBlockRenderer (contentBlock: ContentBlock) {
       return {
         component: Img,
         editable: false
+      }
+    }
+    case 'caption-block': {
+      return {
+        component: Caption,
+        editable: true
       }
     }
     case 'section': {
@@ -654,7 +673,7 @@ export default class MediumEditor extends PureComponent<object, State> {
       if (block.getType() === 'unstyled') {
         const node = getSelectedBlockNode()
         if (node) {
-          const topOffset = node.offsetTop + parseInt((getComputedStyle(node).marginTop!).slice(0 ,-2), 10)
+          const topOffset = node.offsetTop
           const visibility = block.getLength() === 0
           this.setState({
             addButtonTopOffset: topOffset,
@@ -752,12 +771,35 @@ export default class MediumEditor extends PureComponent<object, State> {
       console.log('save: ', convertToRaw(this.state.editorState.getCurrentContent()))
       return 'handled'
     }
+    // image-block logic
     const selectionState = editorState.getSelection()
     const key = selectionState.getStartKey()
     const deleteCommands = ["delete", "delete-word", "backspace", "backspace-word", "backspace-to-start-of-line"]
     if (this.state.focusBlockKeyStore.includes(key) && deleteCommands.includes(command)) {
       this.onChange(removeBlock(editorState, key))
       return 'handled'
+    }
+    if (command === 'backspace') {
+      const contentState = editorState.getCurrentContent()
+      const previousKey = contentState.getKeyBefore(key)
+      const nextKey = contentState.getKeyAfter(key)
+      const previousBlock = contentState.getBlockForKey(previousKey)
+      const nextBlock = contentState.getBlockForKey(nextKey)
+      if (previousBlock && previousBlock.getType() as string === 'image-block' && selectionState.getAnchorOffset() === 0) {
+        if (!nextBlock ) {
+          const newSelectionState = new SelectionState({
+            anchorKey: previousKey,
+            anchorOffset: 0,
+            focusKey: previousKey,
+            focusOffset: 0,
+            isBackward: false,
+            hasFocus: true
+          })
+          setNativeSelection(previousKey)
+          this.onChange(EditorState.forceSelection(editorState, newSelectionState))
+          return 'handled'
+        }
+      }
     }
     return 'not-handled'
   }
@@ -799,37 +841,31 @@ export default class MediumEditor extends PureComponent<object, State> {
     const adjacentBlock = direction === 'up' || direction === 'left'
       ? contentState.getBlockBefore(key)
       : contentState.getBlockAfter(key)
-
-    const caretAtEdge = () => {
-      switch (direction) {
-        case 'up':
-        case 'down': return true
-        case 'left': return selectionState.getAnchorOffset() === 0
-        case 'right': {
-          const currentBlock = editorState.getCurrentContent().getBlockForKey(key)
-          return selectionState.getFocusOffset() === currentBlock.getLength()
-        }
-        default: return false
-      }
-    }
-    if (adjacentBlock && focusBlockKeyStore.includes(adjacentBlock.getKey()) && caretAtEdge()) {
+    if (adjacentBlock &&
+      focusBlockKeyStore.includes(adjacentBlock.getKey()) &&
+      caretAtEdge(editorState, key, direction)
+    ) {
       e.preventDefault()
       setNativeSelection(adjacentBlock.getKey())
       this.onChange(setSelection(editorState, direction))
       return
     }
   } 
-  onUpArrow = (e: React.KeyboardEvent): void => {
+  onUpArrow = (e: React.KeyboardEvent<any>): void => {
     this.handleArrow(e, 'up')
+    handleCaptionArrow(e, 'up', this.state.editorState, this.onChange)
   }
-  onDownArrow = (e: React.KeyboardEvent): void => {
+  onDownArrow = (e: React.KeyboardEvent<any>): void => {
     this.handleArrow(e, 'down')
+    handleCaptionArrow(e, 'down', this.state.editorState, this.onChange)
   }
-  onRightArrow = (e: React.KeyboardEvent): void => {
+  onRightArrow = (e: React.KeyboardEvent<any>): void => {
     this.handleArrow(e, 'right')
+    handleCaptionArrow(e, 'right', this.state.editorState, this.onChange)
   }
-  onLeftArrow = (e: React.KeyboardEvent): void => {
+  onLeftArrow = (e: React.KeyboardEvent<any>): void => {
     this.handleArrow(e, 'left')
+    handleCaptionArrow(e, 'left', this.state.editorState, this.onChange)
   }
   render () {
     const {
@@ -862,7 +898,7 @@ export default class MediumEditor extends PureComponent<object, State> {
                 onRightArrow={this.onRightArrow}
                 onLeftArrow={this.onLeftArrow}
                 readOnly={readOnly}
-                placeholder='Title'
+                // placeholder='Title'
               />
               <AddButton
                 topOffset={addButtonTopOffset}

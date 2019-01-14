@@ -13,6 +13,10 @@
   font-family: Georgia, 'Times New Roman', Times, serif;
 }
 
+.DraftEditor-root, .DraftEditor-editorContainer {
+  position: static;
+}
+
 .myUnstyled {
   margin-top: 30px;
 }
