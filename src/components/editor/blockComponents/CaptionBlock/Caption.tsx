@@ -1,14 +1,19 @@
-import React, { useContext, useState, useRef } from 'react'
+import React, { useContext, useState, useRef, useEffect } from 'react'
 import {
   ContentBlock,
   ContentState,
   EditorBlock,
   EditorState,
-  SelectionState
+  SelectionState,
+  DraftHandleValue,
+  genKey as generateRandomKey,
+  Modifier
 } from 'draft-js'
+import { EditorContext } from '../../Editor'
 import { FocusContext } from '../../Editor'
 import { caretAtEdge } from '../../utils/caretAtEdge'
 import { setNativeSelection } from '../../utils/setNativeSelection'
+import { insertUnstyledBlock } from '../../utils/insertUnstyledBlock'
 
 interface Props {
   block: ContentBlock
@@ -53,6 +58,7 @@ interface Props {
 export function Caption (props: Props) {
   const { block, contentState } = props
   const focusedBlockKey = useContext(FocusContext)
+  const { updateInlineToolTip, updateAddButton } = useContext(EditorContext)!
   const captionHasFocus = block.getKey() === focusedBlockKey
   const mediaHasFocus = contentState.getKeyBefore(block.getKey()) === focusedBlockKey
   const visible =
@@ -61,8 +67,12 @@ export function Caption (props: Props) {
     block.getText() !== ''
       ? true
       : false
+  useEffect(() => {
+    updateAddButton()
+    updateInlineToolTip()
+  }, [visible])
   return (
-    <div style={visible ? {} : {display: 'none'}}>
+    <div style={visible ? {} : { display: 'none' }}>
       <EditorBlock {...props} />
     </div>
   )
@@ -167,4 +177,72 @@ export function handleArrow (
       }
     }
   }
+}
+
+// export function handleKeyCommand (command: string, editorState: EditorState): DraftHandleValue {
+
+// }
+
+export function handleReturn (
+  editorState: EditorState,
+  changeEditorState: (editorState: EditorState) => void
+): DraftHandleValue {
+  const contentState = editorState.getCurrentContent()
+  const selectionState = editorState.getSelection()
+  const key = selectionState.getStartKey()
+  const start = selectionState.getStartOffset()
+  const end = selectionState.getEndOffset()
+  const block = contentState.getBlockForKey(key)
+  const text = block.getText()
+  const length = block.getLength()
+  if (start === 0) {
+    const blockWithNewText = block.set('text', '') as ContentBlock
+    const newKey = generateRandomKey()
+    const newText = text.slice(end - length)
+    const newBlock = new ContentBlock({ key: newKey, type: 'unstyled', text: newText })
+    const newSelectionState = new SelectionState({
+      anchorKey: newKey,
+      anchorOffset: 0,
+      focusKey: newKey,
+      focusOffset: 0,
+      isBackward: false,
+      hasFocus: true
+    })
+    changeEditorState(insertUnstyledBlock(editorState, newBlock, newSelectionState, true, blockWithNewText))
+    return 'handled'
+  } 
+  if (end === length) {
+    const newText = text.slice(0, start)
+    const blockWithNewText = block.set('text', newText) as ContentBlock
+    const newKey = generateRandomKey()
+    const newBlock = new ContentBlock({ key: newKey, type: 'unstyled' })
+    const newSelectionState = new SelectionState({
+      anchorKey: newKey,
+      anchorOffset: 0,
+      focusKey: newKey,
+      focusOffset: 0,
+      isBackward: false,
+      hasFocus: true
+    })
+    changeEditorState(insertUnstyledBlock(editorState, newBlock, newSelectionState, true, blockWithNewText))
+    return 'handled'
+  }
+  if (start !== 0 && end !== length) {
+    if (start === end) return 'handled'
+    const newContentState = Modifier.replaceText(contentState, selectionState, '')
+    const newSelectionState = new SelectionState({
+      anchorKey: key,
+      anchorOffset: start,
+      focusKey: key,
+      focusOffset: start,
+      isBackward: false,
+      hasFocus: true
+    })
+    changeEditorState(EditorState.forceSelection(
+      EditorState.push(editorState, newContentState, 'remove-range'),
+      newSelectionState
+    ))
+    return 'handled'
+  }
+  return 'not-handled'
 }

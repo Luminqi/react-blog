@@ -23,13 +23,17 @@ import './Editor.css'
 import { AddButton } from './addButton/AddButton'
 import { InlineToolTip } from './inlineToolTip/InlineToolTip'
 import { Img } from './blockComponents/imageBlock/Img'
-import { Caption, handleArrow as handleCaptionArrow } from './blockComponents/CaptionBlock/Caption'
+import {
+  Caption,
+  handleArrow as handleCaptionArrow,
+  handleReturn as handleCaptionReturn,
+} from './blockComponents/CaptionBlock/Caption'
 import { Section } from './blockComponents/sectionBlock/Section'
 import { Focus } from './blockComponents/foucsBlock/Focus'
 import { Link } from './link/Link'
 import { getCurrentBlock } from './utils/getCurrentBlock'
 import { setNativeSelection } from './utils/setNativeSelection'
-import { insertUnstyledBlock } from './blockComponents/foucsBlock/modifiers/insertUnstyledBlock'
+import { insertUnstyledBlock } from './utils/insertUnstyledBlock'
 import { removeBlock } from './blockComponents/foucsBlock/modifiers/removeBlock'
 import { setSelection } from './blockComponents/foucsBlock/modifiers/setSelection'
 import { caretAtEdge } from './utils/caretAtEdge'
@@ -315,7 +319,13 @@ const decorator = new CompositeDecorator([
   },
 ])
 
-export const EditorContext = React.createContext(null) as React.Context<object | null>
+interface EditorControls {
+  setEditorState: (editorState: EditorState) => void
+  updateInlineToolTip(): Promise<void>
+  updateAddButton(): void
+}
+
+export const EditorContext = React.createContext(null) as React.Context<EditorControls | null>
 export const FocusContext =  React.createContext(null) as React.Context<string | null>
 export const AlignmentContext = React.createContext(null) as React.Context<Map<string, string> | null>
 export default class MediumEditor extends PureComponent<object, State> {
@@ -332,9 +342,7 @@ export default class MediumEditor extends PureComponent<object, State> {
   )
   _editor: Editor | null = null
   _inlineTools: { [key: string]: 'able' | 'disable' } | null = null
-  _editorControls: {
-    setEditorState: (editorState: EditorState) => void
-  }
+  _editorControls: EditorControls | null = null
   constructor (props: object) {
     super(props)
     this.state = {
@@ -434,6 +442,8 @@ export default class MediumEditor extends PureComponent<object, State> {
       removeFocusBlockKey: this.removeFocusBlockKey,
       setReadOnly: this.setReadOnly,
       setFocusToBlock: this.setFocusToBlock,
+      updateInlineToolTip: this.updateInlineToolTip,
+      updateAddButton: this.updateAddButton,
       getAlignmentBlockControls: this.getAlignmentBlockControls
     }
   }
@@ -698,37 +708,51 @@ export default class MediumEditor extends PureComponent<object, State> {
     const selectionState = editorState.getSelection()
     const key = selectionState.getStartKey()
     const start = selectionState.getStartOffset()
+    const end = selectionState.getEndOffset()
     const block = contentState.getBlockForKey(key)
     const text = block.getText()
     const type = block.getType() as string
+    const length = block.getLength()
     switch (type) {
+      case 'caption-block': {
+        return handleCaptionReturn(editorState, this.onChange)
+      }
       case 'header-three':
       case 'header-four':
       case 'blockquote': {
-        const newKey = generateRandomKey()
-        const newBlock = new ContentBlock({ key: newKey, type: 'unstyled' })
-        const blockMap = contentState.getBlockMap()
-        const array: ContentBlock[] = []
-        blockMap.forEach((block, blockKey) => {
-          array.push(block as ContentBlock)
-          if (blockKey === key) {
-              array.push(newBlock)
-          }
-        })
-        const newContentState = ContentState.createFromBlockArray(array)
-        const newSelectionState = new SelectionState({
-          anchorKey: newKey,
-          anchorOffset: 0,
-          focusKey: newKey,
-          focusOffset: 0,
-          isBackward: false,
-          hasFocus: true
-        })
-        this.onChange(EditorState.forceSelection(
-          EditorState.push(editorState, newContentState, 'insert-fragment'),
-          newSelectionState
-        ))
-        return 'handled'
+        if (start === 0) {
+          const newKey = generateRandomKey()
+          const newBlock = new ContentBlock({ key: newKey, type: 'unstyled'})
+          const newText = text.slice(end - length)
+          const blockWithNewText = block.set('text', newText) as ContentBlock
+          const newSelectionState = new SelectionState({
+            anchorKey: key,
+            anchorOffset: 0,
+            focusKey: key,
+            focusOffset: 0,
+            isBackward: false,
+            hasFocus: true
+          })
+          this.onChange(insertUnstyledBlock(editorState, newBlock, newSelectionState, false, blockWithNewText))
+          return 'handled'
+        }
+        if (end === length) {
+          const newKey = generateRandomKey()
+          const newBlock = new ContentBlock({ key: newKey, type: 'unstyled'})
+          const newText = text.slice(0, start)
+          const blockWithNewText = block.set('text', newText) as ContentBlock
+          const newSelectionState = new SelectionState({
+            anchorKey: newKey,
+            anchorOffset: 0,
+            focusKey: newKey,
+            focusOffset: 0,
+            isBackward: false,
+            hasFocus: true
+          })
+          this.onChange(insertUnstyledBlock(editorState, newBlock, newSelectionState, true, blockWithNewText))
+          return 'handled'
+        }
+        return 'not-handled'
       }
       case 'code-block': {
         let newContentState = null
@@ -760,7 +784,17 @@ export default class MediumEditor extends PureComponent<object, State> {
       }
     }
     if (this.state.focusBlockKeyStore.includes(key)) {
-      this.onChange(insertUnstyledBlock(editorState))
+      const newKey = generateRandomKey()
+      const newBlock = new ContentBlock({ key: newKey, type: 'unstyled'})
+      const newSelectionState = new SelectionState({
+        anchorKey: newKey,
+        anchorOffset: 0,
+        focusKey: newKey,
+        focusOffset: 0,
+        isBackward: false,
+        hasFocus: true
+      })
+      this.onChange(insertUnstyledBlock(editorState, newBlock, newSelectionState))
       return 'handled'
     }
     return 'not-handled'
