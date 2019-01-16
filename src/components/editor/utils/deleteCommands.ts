@@ -1,0 +1,1 @@
+export const deleteCommands = ["delete", "delete-word", "backspace", "backspace-word", "backspace-to-start-of-line"]

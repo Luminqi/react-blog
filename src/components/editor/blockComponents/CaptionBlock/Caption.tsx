@@ -14,6 +14,8 @@ import { FocusContext } from '../../Editor'
 import { caretAtEdge } from '../../utils/caretAtEdge'
 import { setNativeSelection } from '../../utils/setNativeSelection'
 import { insertUnstyledBlock } from '../../utils/insertUnstyledBlock'
+import { deleteCommands } from '../../utils/deleteCommands'
+import { removeBlock } from '../../utils/removeBlock';
 
 interface Props {
   block: ContentBlock
@@ -179,9 +181,26 @@ export function handleArrow (
   }
 }
 
-// export function handleKeyCommand (command: string, editorState: EditorState): DraftHandleValue {
-
-// }
+export function handleKeyCommand (
+  command: string,
+  editorState: EditorState
+): [EditorState, DraftHandleValue] {
+  const contentState = editorState.getCurrentContent()
+  const selectionState = editorState.getSelection()
+  const key = selectionState.getStartKey()
+  const block = contentState.getBlockForKey(key)
+  const previousBlock = contentState.getBlockBefore(key)
+  const nextBlock = contentState.getBlockAfter(key)
+  const nextKey = nextBlock.getKey()
+  const nextType = nextBlock.getType() as string
+  if (deleteCommands.includes(command)) {
+    if (nextType === 'caption-block') {
+      const newEditorState = removeBlock(editorState, nextKey)
+      return [newEditorState, 'handled']
+    }
+  }
+  return [editorState, 'not-handled']
+}
 
 export function handleReturn (
   editorState: EditorState,

@@ -4058,13 +4058,13 @@ immer@1.7.2:
   version "1.7.2"
   resolved "https://registry.yarnpkg.com/immer/-/immer-1.7.2.tgz#a51e9723c50b27e132f6566facbec1c85fc69547"
 
+immutable@4.0.0-rc.12:
+  version "4.0.0-rc.12"
+  resolved "http://r.cnpmjs.org/immutable/download/immutable-4.0.0-rc.12.tgz#ca59a7e4c19ae8d9bf74a97bdf0f6e2f2a5d0217"
+
 immutable@^3.8.1:
   version "3.8.2"
   resolved "http://r.cnpmjs.org/immutable/download/immutable-3.8.2.tgz#c2439951455bb39913daf281376f1530e104adf3"
-
-immutable@^4.0.0-rc.12:
-  version "4.0.0-rc.12"
-  resolved "http://r.cnpmjs.org/immutable/download/immutable-4.0.0-rc.12.tgz#ca59a7e4c19ae8d9bf74a97bdf0f6e2f2a5d0217"
 
 immutable@~3.7.4:
   version "3.7.6"

@@ -11,7 +11,6 @@ import {
   RichUtils,
   Modifier,
   SelectionState,
-  DefaultDraftBlockRenderMap,
   getVisibleSelectionRect,
   genKey as generateRandomKey, 
   CharacterMetadata,
@@ -22,11 +21,15 @@ import 'draft-js/dist/Draft.css'
 import './Editor.css'
 import { AddButton } from './addButton/AddButton'
 import { InlineToolTip } from './inlineToolTip/InlineToolTip'
-import { Img } from './blockComponents/imageBlock/Img'
+import {
+  Img,
+  handleKeyCommand as handleImageKeyCommand
+} from './blockComponents/imageBlock/Img'
 import {
   Caption,
   handleArrow as handleCaptionArrow,
   handleReturn as handleCaptionReturn,
+  handleKeyCommand as handleCaptionKeyCommand,
 } from './blockComponents/CaptionBlock/Caption'
 import { Section } from './blockComponents/sectionBlock/Section'
 import { Focus } from './blockComponents/foucsBlock/Focus'
@@ -34,9 +37,10 @@ import { Link } from './link/Link'
 import { getCurrentBlock } from './utils/getCurrentBlock'
 import { setNativeSelection } from './utils/setNativeSelection'
 import { insertUnstyledBlock } from './utils/insertUnstyledBlock'
-import { removeBlock } from './blockComponents/foucsBlock/modifiers/removeBlock'
+import { removeBlock } from './utils/removeBlock'
 import { setSelection } from './blockComponents/foucsBlock/modifiers/setSelection'
 import { caretAtEdge } from './utils/caretAtEdge'
+import { deleteCommands } from './utils/deleteCommands'
 
 interface State {
   editorState: EditorState
@@ -805,22 +809,38 @@ export default class MediumEditor extends PureComponent<object, State> {
       console.log('save: ', convertToRaw(this.state.editorState.getCurrentContent()))
       return 'handled'
     }
-    // image-block logic
+    
+    // const [imgEditorState, imgHandleValue] = handleImageKeyCommand(command, editorState, this.state.focusBlockKeyStore)
+    // const [captEditorState, captHandleValue] = handleCaptionKeyCommand(command, imgEditorState)
+    // const handleValue = [imgHandleValue, captHandleValue]
+    // if (handleValue.includes('handled')) {
+    //   this.onChange(captEditorState)
+    //   return 'not-handled'
+    // }
+
+    //image-block logic
+    const contentState = editorState.getCurrentContent()
     const selectionState = editorState.getSelection()
     const key = selectionState.getStartKey()
-    const deleteCommands = ["delete", "delete-word", "backspace", "backspace-word", "backspace-to-start-of-line"]
+    const block = contentState.getBlockForKey(key)
+    const type = block.getType() as string
+    const previousBlock = contentState.getBlockBefore(key)
+    const nextBlock = contentState.getBlockAfter(key)
     if (this.state.focusBlockKeyStore.includes(key) && deleteCommands.includes(command)) {
-      this.onChange(removeBlock(editorState, key))
+      const nextKey = contentState.getKeyAfter(key)
+      const nextBlock = contentState.getBlockAfter(key)
+      if (nextBlock.getType() as string === 'caption-block') {
+        this.onChange(removeBlock(editorState, key, nextKey))
+      } else {
+        this.onChange(removeBlock(editorState, key))
+      }
       return 'handled'
     }
-    if (command === 'backspace') {
-      const contentState = editorState.getCurrentContent()
-      const previousKey = contentState.getKeyBefore(key)
-      const nextKey = contentState.getKeyAfter(key)
-      const previousBlock = contentState.getBlockForKey(previousKey)
-      const nextBlock = contentState.getBlockForKey(nextKey)
-      if (previousBlock && previousBlock.getType() as string === 'image-block' && selectionState.getAnchorOffset() === 0) {
-        if (!nextBlock ) {
+    
+    if (type === 'caption-block') {
+      if (selectionState.isCollapsed() && selectionState.getAnchorOffset() === 0) {
+        if (command === 'backspace') {
+          const previousKey = contentState.getKeyBefore(key)
           const newSelectionState = new SelectionState({
             anchorKey: previousKey,
             anchorOffset: 0,
@@ -831,6 +851,29 @@ export default class MediumEditor extends PureComponent<object, State> {
           })
           setNativeSelection(previousKey)
           this.onChange(EditorState.forceSelection(editorState, newSelectionState))
+          return 'handled'
+        }
+      }
+    }
+    
+    if (previousBlock && previousBlock.getType() as string === 'caption-block') {
+      if (selectionState.isCollapsed() && selectionState.getAnchorOffset() === 0) {
+        if (command === 'backspace') {
+          let newEditorState = editorState
+          if (nextBlock && block.getLength() === 0 ) {
+            newEditorState = removeBlock(editorState, key)
+          }
+          const mediaKey = contentState.getKeyBefore(previousBlock.getKey())
+          const newSelectionState = new SelectionState({
+            anchorKey: mediaKey,
+            anchorOffset: 0,
+            focusKey: mediaKey,
+            focusOffset: 0,
+            isBackward: false,
+            hasFocus: true
+          })
+          setNativeSelection(mediaKey)
+          this.onChange(EditorState.forceSelection(newEditorState, newSelectionState))
           return 'handled'
         }
       }

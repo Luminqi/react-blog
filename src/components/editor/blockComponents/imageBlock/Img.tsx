@@ -3,15 +3,17 @@ import {
   ContentBlock,
   ContentState,
   EditorState,
-  genKey as generateRandomKey,
-  SelectionState,
-  EditorBlock
+  DraftHandleValue,
+  SelectionState
 } from 'draft-js'
-import MediumEditor, { AlignmentContext } from '../../Editor'
+import { List } from 'immutable'
+import MediumEditor from '../../Editor'
 import { setNativeSelection } from '../../utils/setNativeSelection'
+import { deleteCommands } from '../../utils/deleteCommands'
+import { removeBlock } from '../../utils/removeBlock'
 import { useAlignment } from '../alignmentBlock/Alignment'
 import './Img.css'
-import { callbackify } from 'util';
+
 
 interface Props {
   block: ContentBlock
@@ -107,6 +109,43 @@ export function Img ({ block } : Props) {
         }
       </MediumEditor.Focus>
   )
+}
+
+export function handleKeyCommand (
+  command: string,
+  editorState: EditorState,
+  focusBlockKeyStore: List<string>,
+): [EditorState, DraftHandleValue] {
+  const contentState = editorState.getCurrentContent()
+  const selectionState = editorState.getSelection()
+  const key = selectionState.getStartKey()
+  const previousBlock = contentState.getBlockBefore(key)
+  const nextBlock = contentState.getBlockAfter(key)
+  if (focusBlockKeyStore.includes(key)) {
+    if (deleteCommands.includes(command)) {
+      const newEditorState = removeBlock(editorState, key)
+      return [newEditorState, 'handled']
+    }
+  }
+  if (previousBlock && previousBlock.getType() as string === 'image-block') {
+    if (selectionState.isCollapsed() && selectionState.getAnchorOffset() === 0) {
+      if (!nextBlock) {
+        const previousKey = previousBlock.getKey()
+        const newSelectionState = new SelectionState({
+          anchorKey: previousKey,
+          anchorOffset: 0,
+          focusKey: previousKey,
+          focusOffset: 0,
+          isBackward: false,
+          hasFocus: true
+        })
+        setNativeSelection(previousKey)
+        const newEditorState = EditorState.forceSelection(editorState, newSelectionState)
+        return [newEditorState, 'handled']
+      }
+    }
+  }
+  return [editorState, 'not-handled']
 }
 
 // export class Img extends Component<Props, State> {
