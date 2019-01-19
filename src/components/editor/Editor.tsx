@@ -21,24 +21,27 @@ import 'draft-js/dist/Draft.css'
 import './Editor.css'
 import { AddButton } from './addButton/AddButton'
 import { InlineToolTip } from './inlineToolTip/InlineToolTip'
-import {
-  Img,
-  handleKeyCommand as handleImageKeyCommand
-} from './blockComponents/imageBlock/Img'
+import { Img } from './blockComponents/imageBlock/Img'
 import {
   Caption,
   handleArrow as handleCaptionArrow,
   handleReturn as handleCaptionReturn,
   handleKeyCommand as handleCaptionKeyCommand,
 } from './blockComponents/CaptionBlock/Caption'
-import { Section } from './blockComponents/sectionBlock/Section'
-import { Focus } from './blockComponents/foucsBlock/Focus'
+import {
+  Section,
+  handleArrow as handleSectionArrow
+} from './blockComponents/sectionBlock/Section'
+import {
+  Focus,
+  handleKeyCommand as handleFocusKeyCommand
+} from './blockComponents/foucsBlock/Focus'
 import { Link } from './link/Link'
 import { getCurrentBlock } from './utils/getCurrentBlock'
 import { setNativeSelection } from './utils/setNativeSelection'
 import { insertUnstyledBlock } from './utils/insertUnstyledBlock'
 import { removeBlock } from './utils/removeBlock'
-import { setSelection } from './blockComponents/foucsBlock/modifiers/setSelection'
+import { setSelection } from './utils/setSelection'
 import { caretAtEdge } from './utils/caretAtEdge'
 import { deleteCommands } from './utils/deleteCommands'
 
@@ -105,6 +108,9 @@ function myBlockStyleFn (contentBlock: ContentBlock) {
     }
     case 'image-block': {
       return 'myImageBlock'
+    }
+    case 'caption-block': {
+      return 'myCaptionBlock'
     }
     default: return type
   }
@@ -277,6 +283,28 @@ function insertNewBlock (
     }
     default: return editorState
   }
+}
+
+export function handleListKeyCommand (
+  command: string,
+  editorState: EditorState,
+  changeEditorState: (editorState: EditorState) => void
+): DraftHandleValue {
+  const contentState = editorState.getCurrentContent()
+  const selectionState = editorState.getSelection()
+  const key = selectionState.getStartKey()
+  const block = contentState.getBlockForKey(key)
+  const type = block.getType()
+  if (type === 'unordered-list-item' || type === 'ordered-list-item') {
+    if (command === 'backspace') {
+      if (selectionState.isCollapsed() && selectionState.getAnchorOffset() === 0) {
+        const newContentState = Modifier.setBlockType(contentState, selectionState, 'unstyled')
+        changeEditorState(EditorState.push(editorState, newContentState, 'change-block-type'))
+        return 'handled'
+      }
+    }
+  }
+  return 'not-handled'
 }
 
 function myBlockRenderer (contentBlock: ContentBlock) {
@@ -545,6 +573,7 @@ export default class MediumEditor extends PureComponent<object, State> {
     this.focus()
     this.updateAddButton()
     this.updateCurrentBlockKey()
+    window.addEventListener('resize', this.updateInlineToolTip)
   }
   componentDidUpdate (prevProps: object, prevState: State) {
     if (this.state.editorState !== prevState.editorState) {
@@ -809,76 +838,14 @@ export default class MediumEditor extends PureComponent<object, State> {
       console.log('save: ', convertToRaw(this.state.editorState.getCurrentContent()))
       return 'handled'
     }
-    
-    // const [imgEditorState, imgHandleValue] = handleImageKeyCommand(command, editorState, this.state.focusBlockKeyStore)
-    // const [captEditorState, captHandleValue] = handleCaptionKeyCommand(command, imgEditorState)
-    // const handleValue = [imgHandleValue, captHandleValue]
-    // if (handleValue.includes('handled')) {
-    //   this.onChange(captEditorState)
-    //   return 'not-handled'
-    // }
-
-    //image-block logic
-    const contentState = editorState.getCurrentContent()
-    const selectionState = editorState.getSelection()
-    const key = selectionState.getStartKey()
-    const block = contentState.getBlockForKey(key)
-    const type = block.getType() as string
-    const previousBlock = contentState.getBlockBefore(key)
-    const nextBlock = contentState.getBlockAfter(key)
-    if (this.state.focusBlockKeyStore.includes(key) && deleteCommands.includes(command)) {
-      const nextKey = contentState.getKeyAfter(key)
-      const nextBlock = contentState.getBlockAfter(key)
-      if (nextBlock.getType() as string === 'caption-block') {
-        this.onChange(removeBlock(editorState, key, nextKey))
-      } else {
-        this.onChange(removeBlock(editorState, key))
+    switch ('handled') {
+      case handleListKeyCommand(command, editorState, this.onChange):
+      case handleFocusKeyCommand(command, editorState, this.state.focusBlockKeyStore, this.onChange):
+      case handleCaptionKeyCommand(command, editorState, this.onChange): {
+        return 'handled'
       }
-      return 'handled'
-    }
-    
-    if (type === 'caption-block') {
-      if (selectionState.isCollapsed() && selectionState.getAnchorOffset() === 0) {
-        if (command === 'backspace') {
-          const previousKey = contentState.getKeyBefore(key)
-          const newSelectionState = new SelectionState({
-            anchorKey: previousKey,
-            anchorOffset: 0,
-            focusKey: previousKey,
-            focusOffset: 0,
-            isBackward: false,
-            hasFocus: true
-          })
-          setNativeSelection(previousKey)
-          this.onChange(EditorState.forceSelection(editorState, newSelectionState))
-          return 'handled'
-        }
-      }
-    }
-    
-    if (previousBlock && previousBlock.getType() as string === 'caption-block') {
-      if (selectionState.isCollapsed() && selectionState.getAnchorOffset() === 0) {
-        if (command === 'backspace') {
-          let newEditorState = editorState
-          if (nextBlock && block.getLength() === 0 ) {
-            newEditorState = removeBlock(editorState, key)
-          }
-          const mediaKey = contentState.getKeyBefore(previousBlock.getKey())
-          const newSelectionState = new SelectionState({
-            anchorKey: mediaKey,
-            anchorOffset: 0,
-            focusKey: mediaKey,
-            focusOffset: 0,
-            isBackward: false,
-            hasFocus: true
-          })
-          setNativeSelection(mediaKey)
-          this.onChange(EditorState.forceSelection(newEditorState, newSelectionState))
-          return 'handled'
-        }
-      }
-    }
-    return 'not-handled'
+      default: return 'not-handled'
+    } 
   }
   handleBeforeInput = (
     chars: string,
@@ -923,7 +890,6 @@ export default class MediumEditor extends PureComponent<object, State> {
       caretAtEdge(editorState, key, direction)
     ) {
       e.preventDefault()
-      setNativeSelection(adjacentBlock.getKey())
       this.onChange(setSelection(editorState, direction))
       return
     }
@@ -931,18 +897,22 @@ export default class MediumEditor extends PureComponent<object, State> {
   onUpArrow = (e: React.KeyboardEvent<any>): void => {
     this.handleArrow(e, 'up')
     handleCaptionArrow(e, 'up', this.state.editorState, this.onChange)
+    handleSectionArrow(e, 'up', this.state.editorState, this.onChange)
   }
   onDownArrow = (e: React.KeyboardEvent<any>): void => {
     this.handleArrow(e, 'down')
     handleCaptionArrow(e, 'down', this.state.editorState, this.onChange)
+    handleSectionArrow(e, 'down', this.state.editorState, this.onChange)
   }
   onRightArrow = (e: React.KeyboardEvent<any>): void => {
     this.handleArrow(e, 'right')
     handleCaptionArrow(e, 'right', this.state.editorState, this.onChange)
+    handleSectionArrow(e, 'right', this.state.editorState, this.onChange)
   }
   onLeftArrow = (e: React.KeyboardEvent<any>): void => {
     this.handleArrow(e, 'left')
     handleCaptionArrow(e, 'left', this.state.editorState, this.onChange)
+    handleSectionArrow(e, 'left', this.state.editorState, this.onChange)
   }
   render () {
     const {

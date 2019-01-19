@@ -1,7 +1,8 @@
 import React, { PureComponent, Component, useEffect } from 'react'
-import { ContentBlock, EditorState } from 'draft-js'
-import { EditorContext } from '../../Editor'
-import './Focus.css'
+import { ContentBlock, EditorState, DraftHandleValue } from 'draft-js'
+import { List } from 'immutable';
+import { deleteCommands } from '../../utils/deleteCommands'
+import { removeBlock } from '../../utils/removeBlock'
 
 interface injectedProps {
   hasFocus: boolean
@@ -110,4 +111,26 @@ export class Focus extends PureComponent<Props, object> {
       </div>
     )
   }
+}
+
+export function handleKeyCommand (
+  command: string,
+  editorState: EditorState,
+  focusBlockKeyStore: List<string>,
+  changeEditorState: (editorState: EditorState) => void
+): DraftHandleValue {
+  const contentState = editorState.getCurrentContent()
+  const selectionState = editorState.getSelection()
+  const key = selectionState.getStartKey()
+  if (focusBlockKeyStore.includes(key) && deleteCommands.includes(command)) {
+    const nextKey = contentState.getKeyAfter(key)
+    const nextBlock = contentState.getBlockAfter(key)
+    if (nextBlock.getType() as string === 'caption-block') {
+      changeEditorState(removeBlock(editorState, key, nextKey))
+    } else {
+      changeEditorState(removeBlock(editorState, key))
+    }
+    return 'handled'
+  }
+  return 'not-handled'
 }

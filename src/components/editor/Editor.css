@@ -68,3 +68,11 @@
 .myImageBlock {
   margin-top: 40px;
 }
+
+.myCaptionBlock {
+  color: rgba(0,0,0,.68);
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 1.4;
+  margin-top: 10px;
+}
