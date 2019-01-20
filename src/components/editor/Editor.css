@@ -69,6 +69,18 @@
   margin-top: 40px;
 }
 
+.myImageBlock.outsetleft {
+  display: inline-block;
+  clear: both;
+  position: relative;
+}
+
+.myImageBlock.outsetleft::after {
+  content: "";
+  clear: both;
+  display: table;
+}
+
 .myCaptionBlock {
   color: rgba(0,0,0,.68);
   font-weight: 400;

@@ -6,7 +6,7 @@ import { removeBlock } from '../../utils/removeBlock'
 
 interface injectedProps {
   hasFocus: boolean
-  setReadOnly(value: string): void
+  handleClick(e: React.MouseEvent<HTMLElement>): void
 }
 
 interface Props {
@@ -91,7 +91,7 @@ export class Focus extends PureComponent<Props, object> {
     this.props.removeFocusBlockKey(this.props.block.getKey())
   }
 
-  handleClick = (e: React.MouseEvent) => {
+  handleClick = (e: React.MouseEvent<HTMLElement>) => {
     e.preventDefault()
     const { currentBlockKey, setFocusToBlock, block } = this.props
     if (currentBlockKey !== block.getKey())
@@ -99,16 +99,13 @@ export class Focus extends PureComponent<Props, object> {
   }
 
   render () {
-    const { currentBlockKey, block, setReadOnly } = this.props
-    const hasFocus =  currentBlockKey === block.getKey() 
-    const status = hasFocus ? 'focused' : 'blurred'
+    const { currentBlockKey, block } = this.props
+    const hasFocus =  currentBlockKey === block.getKey()
     return (
-      <div className={`focusBlock ${status}`} onClick={this.handleClick}>
-        {this.props.children({
-          hasFocus,
-          setReadOnly: setReadOnly
-        })}
-      </div>
+      this.props.children({
+        hasFocus,
+        handleClick: this.handleClick
+      })
     )
   }
 }

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useLayoutEffect } from 'react'
 import {
   ContentBlock,
   ContentState,
@@ -29,18 +29,30 @@ function processImageSize (width: number, height: number): {width: number; heigh
 }
 
 export function Img ({ block } : Props) {
+  const key = block.getKey()
   useEffect(() => {
-    setNativeSelection(block.getKey())
+    setNativeSelection(key)
   }, [])
   const { alignment } = useAlignment(block)
   const data = block.getData()
   const src = data.get('src')
   const { width, height } = processImageSize(data.get('width'), data.get('height'))
   let alignmentStyle = {}
+  const imgBlockNode = document.querySelector(`[data-offset-key="${key}-0-0"]`)
+  useLayoutEffect(() => {
+    if (imgBlockNode) {
+      if (alignment === 'OUTSETLEFT') {
+        imgBlockNode.classList.add('outsetleft')
+      } else {
+        imgBlockNode.classList.remove('outsetleft')
+      }
+    }
+  }, [alignment])
   switch (alignment) {
     case 'OUTSETLEFT': {
       alignmentStyle = {
-        display: 'block'
+        display: 'block',
+        float: 'left',
       }
       break
     }
@@ -78,9 +90,11 @@ export function Img ({ block } : Props) {
       <MediumEditor.Focus block={block}>
         {
           ({
-            hasFocus
+            hasFocus,
+            handleClick
           }: {
             hasFocus: boolean
+            handleClick(e: React.MouseEvent<HTMLElement>): void
           }) => (
             <img
               className={`image ${hasFocus ? 'focused' : 'blurred'} ${alignment.toLocaleLowerCase()}`}
@@ -90,6 +104,7 @@ export function Img ({ block } : Props) {
                 ...alignmentStyle
               }}
               src={src}
+              onClick={handleClick}
             />
           )
         }
