@@ -1,4 +1,4 @@
-import React, { useContext, useEffect } from 'react'
+import React, { useContext, useEffect, useLayoutEffect, useState } from 'react'
 import {
   ContentBlock,
   ContentState,
@@ -17,6 +17,7 @@ import { insertUnstyledBlock } from '../../utils/insertUnstyledBlock'
 import { removeBlock } from '../../utils/removeBlock'
 import './Caption.css'
 import { setSelection } from '../../utils/setSelection';
+import { useAlignment } from '../alignmentBlock/Alignment';
 
 interface Props {
   block: ContentBlock
@@ -29,7 +30,7 @@ export function Caption (props: Props) {
   const { updateInlineToolTip, updateAddButton } = useContext(EditorContext)!
   const captionKey = block.getKey()
   const captionHasFocus = captionKey === focusedBlockKey
-  const mediaKey = contentState.getKeyBefore(block.getKey())
+  const mediaKey = contentState.getKeyBefore(captionKey)
   const mediaHasFocus = mediaKey === focusedBlockKey
   const visible =
     captionHasFocus ||
@@ -41,8 +42,25 @@ export function Caption (props: Props) {
     updateAddButton()
     updateInlineToolTip()
   }, [visible])
+  const captionNode = document.querySelector(`[data-offset-key="${captionKey}-0-0"]`)
+  const mediaBlock = contentState.getBlockBefore(captionKey)
+  const { alignment } = useAlignment(mediaBlock)
+  const [captionStyle, setCaptionStyle] = useState({})
+  useLayoutEffect(() => {
+    if (captionNode) {
+      if (alignment === 'OUTSETLEFT') {
+        const mediaBlock = document.querySelector(`[data-offset-key="${mediaKey}-0-0"]`)
+        const width = mediaBlock!.clientWidth
+        setCaptionStyle({width})
+        captionNode.classList.add('outsetleft') 
+      } else {
+        setCaptionStyle({})
+        captionNode.classList.remove('outsetleft')
+      }
+    }
+  }, [alignment])
   return (
-    <div className="Caption" style={visible ? { } : { display: 'none' }}>
+    <div className="Caption" style={visible ? {...captionStyle} : { display: 'none', ...captionStyle}}>
       <EditorBlock {...props} />
     </div>
   )

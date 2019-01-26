@@ -28,7 +28,7 @@ function processImageSize (width: number, height: number): {width: number; heigh
   }
 }
 
-export function Img ({ block } : Props) {
+export function Img ({ block, contentState } : Props) {
   const key = block.getKey()
   useEffect(() => {
     setNativeSelection(key)
@@ -51,8 +51,7 @@ export function Img ({ block } : Props) {
   switch (alignment) {
     case 'OUTSETLEFT': {
       alignmentStyle = {
-        display: 'block',
-        float: 'left',
+        display: 'block'
       }
       break
     }
